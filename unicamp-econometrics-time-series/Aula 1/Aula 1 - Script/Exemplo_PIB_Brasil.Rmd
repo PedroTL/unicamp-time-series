@@ -1,0 +1,107 @@
+---
+title: "Decomposição de ST"
+author: "R Ballini"
+date: "04/03/2024"
+output:
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Exemplo: PIB pc - Brasil
+
+```{r}
+#install.packages('readxl')
+library(readxl)
+
+pib= read_excel('PIB_Brasil.xlsx')
+View(pib)
+
+pib = ts(pib[,2],start=1980,freq=1)
+plot(pib,xlab='Anos',ylab='PIB pc')
+grid()
+
+```
+
+## Tendência Linear
+
+```{r}
+n=length(pib)
+
+t=ts(seq(1,n),start=1980,freq=1)
+
+modelo=lm(pib~t)
+summary(modelo)
+
+# Série estimada de tendência linear
+tend.estimada=ts(fitted(modelo),start=1980,freq=1)
+View(tend.estimada)
+
+# Série livre de tendência = pib - tendencia.estimada
+aleatorio=ts(residuals(modelo),start=1980,freq=1)
+View(aleatorio)
+
+par(mfrow=c(3,1))
+plot(pib)
+plot(tend.estimada)
+plot(aleatorio)
+
+par(mfrow=c(1,1))
+min.dados=min(pib,aleatorio,tend.estimada)
+min.dados
+
+max.dados=max(pib,aleatorio,tend.estimada)
+max.dados
+
+plot(pib,ylim=c(min.dados,max.dados),ylab='PIB',xlab='Anos',col='blue')
+par(new=TRUE)
+plot(tend.estimada,ylim=c(min.dados,max.dados),axes=F,ann=F,col='red')
+par(new=TRUE)
+plot(aleatorio,ylim=c(min.dados,max.dados),axes=F,ann=F,col='green')
+
+```
+
+## Previsão de 2022 e 2024
+
+```{r}
+#Previsão ano 2022
+prev1=modelo$coefficients[1] + modelo$coefficients[2]*(n+1)
+prev1
+
+#Previsão ano 2023
+prev2=modelo$coefficients[1] + modelo$coefficients[2]*(n+2)
+prev2
+
+#Previsão ano 2024
+prev3=modelo$coefficients[1] + modelo$coefficients[2]*(n+3)
+prev3
+
+#número de anos a ser previsto = número de passos à frente
+h=3
+prev=matrix(NA,nrow=h,ncol=1)
+
+for (i in 1:h){
+  prev[(i)]=modelo$coefficients[1] + modelo$coefficients[2]*(n+i)
+}
+prev
+
+min.dados1=min(pib,prev,tend.estimada)
+min.dados1
+
+max.dados1=max(pib,prev,tend.estimada)
+max.dados1
+
+plot(window(pib,start=1980),ylim=c(min.dados1,max.dados1),ylab='PIB',
+     xlab='Anos',col='blue',lwd=2,xlim=c(1980,2024))
+
+lines(ts(tend.estimada,start=c(1980),freq=1),col='red',lwd=2,lty=1)
+abline(v=2021,col='blue',lty=2)
+lines(ts(c(tend.estimada[length(tend.estimada)],prev),start=c(2021),freq=1),
+      col='green',lty=1,lwd=2,xlim=c(1980,2024))
+
+```

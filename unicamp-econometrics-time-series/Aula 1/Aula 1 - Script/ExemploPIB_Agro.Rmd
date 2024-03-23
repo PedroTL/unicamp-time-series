@@ -1,0 +1,155 @@
+---
+title: "Decomposição de Séries  Temporais"
+author: "Rosangela Ballini"
+date: "4/03/2024"
+output: 
+  word_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Série do PIB Agropecuária do Brasil
+
+```{r}
+library(readxl)
+
+dados=read_excel('PIB_Agropecuaria.xlsx')
+View(dados)
+
+pib=ts(dados[,2],start=c(2000,1),freq=4)
+
+lpib=ts(log(pib),start=c(2000,1),freq=4)
+
+par(mfrow=c(1,2))
+
+plot(pib,xlab='Trim/Ano', ylab='PIB',main='Gráfico 1: PIB Agropecuária - Br')
+
+plot(lpib,xlab='Trim/Ano', ylab='log(PIB)',main='Gráfico 2: Log PIB Agropecuária - Br')
+
+```
+
+
+# Decomposição da Série Temporal
+
+```{r}
+#Componente de tendência
+t=ts(seq(1: length(lpib)),start=c(2000,1),freq=4)
+
+library(forecast)
+dummies=seasonaldummy(lpib)
+
+modelo=lm(lpib~t+dummies)
+summary(modelo)
+
+```
+
+
+# Gráficos dos componentes de tendência, sazonal e errático
+
+```{r}
+b=modelo$coefficients
+print(b)
+
+tendencia = ts(b[1]+ b[2]*t,start=c(2000,1), freq=4 )
+#View(tendencia)
+
+sazonal=ts(b[3]*dummies[,1] + b[4]*dummies[,2] + b[5]*dummies[,3],start=c(2000,1), freq=4 )
+
+residuo=ts(resid(modelo),start=c(2000,1),freq=4)
+
+## Gráficos
+par(mfrow=c(2,2)) # Particionando a janela de gr?ficos
+plot(lpib, col='black', lwd=2, main="Série original")
+plot(tendencia, col='red', lwd=2, main="Tendência")
+plot(sazonal, col='red', lwd=2, main="Sazonalidade")
+plot(residuo, col='orange', lwd=2, main="Resíduos")
+
+
+```
+
+```{r}
+#Modelo de Previsão 4o trim de 2023 ao 4o trim de 2024 
+#Construção dos vetores que receberão os valores de previsão. 
+
+#número de anos a ser previsto = número de passos à frente
+h=5
+
+n=length(lpib)
+
+lprev=matrix(NA,nrow=h,ncol=1)
+for (i in 1:h){
+  lprev[i]=b[1] + b[2]*(n+i) + b[3]*dummies[i,1] + b[4]*dummies[i,2]+b[5]*dummies[i,3]
+}
+prev=matrix(NA,nrow=h,ncol=1)
+#Obter o PIB na base original, e corrigindo o vi?s:
+PIB_prev=exp(lprev)
+prev=ts(PIB_prev,start=c(2003,4),freq=4)
+
+modelo.estimado=ts(exp(fitted(modelo)),start=c(2000,1),freq=4)
+
+min.dados1=min(pib,prev,modelo.estimado)
+min.dados1
+
+max.dados1=max(pib,prev,modelo.estimado)
+max.dados1
+
+plot(window(pib,start=c(2000,1)),ylim=c(min.dados1,max.dados1),ylab='PIB',
+     xlab='Anos',col='blue',lwd=2,xlim=c(2000,2025))
+
+lines(ts(modelo.estimado,start=c(2000,1),freq=4),col='red',lwd=2,lty=1)
+abline(v=c(2023,3),col='blue',lty=2)
+lines(ts(c(modelo.estimado[length(modelo.estimado)],prev),start=c(2023,3),freq=4),
+      col='green',lty=1,lwd=2,xlim=c(2000,2025))
+
+
+```
+
+
+
+# Decomposição Por Médias Móveis
+
+```{r}
+#Modelo Multiplicativo
+decomp.mm= decompose(pib,type='multiplicative')
+plot(decomp.mm)
+
+sazonal.mm=decomp.mm$seasonal
+View(sazonal.mm)
+
+tendencia.mm=decomp.mm$trend
+View(tendencia.mm)
+
+residuos.mm=decomp.mm$random
+View(residuos.mm)
+
+indice.saz=decomp.mm$figure
+indice.saz
+
+dessaz.pib=ts(pib/sazonal.mm,start=c(1996,1),freq=4)
+plot(dessaz.pib, main='PIB dessazonalizado')
+
+
+#Modelo Aditivo
+aditivo.mm= decompose(pib,type='additive')
+plot(aditivo.mm)
+
+Saz.aditivo=aditivo.mm$seasonal
+View(Saz.aditivo)
+
+tendencia.aditivo=aditivo.mm$trend
+View(tendencia.aditivo)
+
+residuos.aditivo=aditivo.mm$random
+View(residuos.aditivo)
+
+aditivo.saz=aditivo.mm$figure
+aditivo.saz
+
+pib.aditivo=ts(pib - Saz.aditivo,start=c(1996,1),freq=4)
+plot(pib.aditivo, main='PIB dessazonalizado')
+
+```
+

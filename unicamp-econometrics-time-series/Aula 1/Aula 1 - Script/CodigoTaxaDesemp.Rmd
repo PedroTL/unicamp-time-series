@@ -1,0 +1,57 @@
+---
+title: "Componente Sazonal"
+author: "R Ballini"
+date: "04/03/2024"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+
+desemp=read_excel('TaxaDesemprego.xlsx')
+
+desemp=ts(desemp[,2],start=c(1985,1),freq=12)
+
+plot(desemp,ylab='Taxa Desemprego', xlab='Mês/Ano')
+
+```
+
+```{r}
+#install.packages('forecast')
+library(forecast)
+
+dummies=seasonaldummy(desemp)
+
+modelo=lm(desemp~dummies)
+summary(modelo)
+
+sazonal=ts(modelo$fitted.values,start=c(1985,1),freq=12)
+plot(sazonal)
+
+dessaz=ts(modelo$residuals,start=c(1985,1),freq=12)
+plot(dessaz)
+
+par(mfrow=c(3,1))
+plot(desemp,ylab='Taxa Desemprego', xlab='Mês/Ano')
+plot( sazonal, ylab='Sazonal')
+plot(dessaz, ylab='Dessazonal')
+
+
+par(mfrow=c(1,1))
+min.desemp=min(desemp,dessaz)
+max.desemp=max(desemp,dessaz)
+plot(desemp,ylab='Taxa Desemprego', ylim=c(min.desemp,max.desemp),xlab='Mês/Ano')
+par(new=T)
+plot(dessaz,axes=F,ann=F, ylim=c(min.desemp,max.desemp),col='blue')
+grid()
+```
+
+
+
+

@@ -1,0 +1,212 @@
+---
+title: "Aula2"
+author: "R Ballini"
+date: "29/03/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Leitura do arquivo de dados
+```{r}
+library(readxl)
+
+pib=read_excel('PIB_Anual_Belgica.xlsx')
+View(pib)
+
+pib=ts(pib[,2],start=1953,freq=1)
+plot(pib,ylab='PIB', xlab='Anos')
+
+```
+
+
+# 1) Polinômio de ordem 1
+```{r}
+n=length(pib)
+
+t=ts(seq(1:n),start=1953,freq=1)
+
+modelo.linear = lm(pib ~t)
+summary(modelo.linear)
+
+y.linear = ts(fitted(modelo.linear),start=1953,freq=1)
+
+min.pib=min(pib, y.linear)
+max.pib=max(pib,y.linear)
+
+plot(pib,ylab='PIB',xlab='Anos',ylim=c(min.pib,max.pib),col='blue')
+par(new=TRUE)
+plot(y.linear,ann=F,axes=F,ylim=c(min.pib,max.pib),col='red')
+
+# Obter a série livre de tendência
+z =ts(residuals(modelo.linear),start=1953,freq=1)
+
+plot(pib,ylab='PIB',xlab='Anos',ylim=c(min.pib,max.pib),col='blue')
+par(new=TRUE)
+plot(y.linear,ann=F,axes=F,ylim=c(min.pib,max.pib),col='red')
+par(new=T)
+plot(z,ann=F,axes=F,ylim=c(min.pib,max.pib),col='green')
+
+# Previsão de 2011 a 2020
+h=10
+prev=matrix(NA,nrow=h,ncol=1)
+
+for (i in 1:h){
+  prev[i] = modelo.linear$coefficients[1] + modelo.linear$coefficients[2]*(n+i)
+}
+prev
+
+min.dados1=min(pib,prev,y.linear)
+min.dados1
+
+max.dados1=max(pib,prev,y.linear)
+max.dados1
+
+plot(window(pib,start=1953),ylim=c(min.dados1,max.dados1),ylab='PIB',
+     xlab='Anos',col='blue',lwd=2,xlim=c(1953,2021))
+
+lines(ts(y.linear,start=c(1953),freq=1),col='red',lwd=2)
+abline(v=end(pib),col='blue',lty=2)
+lines(ts(c(y.linear[length(y.linear)],prev),start=c(2010,1),freq=1),
+      col='darkred',lty=2,lwd=2)
+```
+
+# 2) Modelo com polinômio de ordem 2
+
+```{r}
+modelo.quadr=lm(pib ~ t + I(t^2))
+summary(modelo.quadr)
+
+# Série de tendência quadrática
+y.quadr=ts(fitted(modelo.quadr),start=1953,freq=1)
+
+min.quadr=min(pib, y.quadr)
+max.quadr=max(pib,y.quadr)
+
+plot(pib,ylab='PIB',xlab='Anos',ylim=c(min.quadr,max.quadr),col='blue')
+par(new=TRUE)
+plot(y.quadr,ann=F,axes=F,ylim=c(min.quadr,max.quadr),col='red')
+
+# Obter a série livre de tendência
+z.quadr =ts(residuals(modelo.quadr),start=1953,freq=1)
+
+min.quadr=min(pib, y.quadr,z.quadr)
+max.quadr=max(pib, y.quadr,z.quadr)
+
+plot(pib,ylab='PIB',xlab='Anos',ylim=c(min.quadr,max.quadr),col='blue')
+par(new=TRUE)
+plot(y.quadr,ann=F,axes=F,ylim=c(min.quadr,max.quadr),col='red')
+par(new=T)
+plot(z.quadr,ann=F,axes=F,ylim=c(min.quadr,max.quadr),col='green')
+
+# Previsão de 2011 a 2020
+h=10
+prev.quadr=matrix(NA,nrow=h,ncol=1)
+
+for (i in 1:h){
+  prev.quadr[i] = modelo.quadr$coefficients[1] + modelo.quadr$coefficients[2]*(n+i) + modelo.quadr$coefficients[3]*I((n+i)^2)
+}
+prev.quadr
+
+min.dados1=min(pib,prev.quadr,y.quadr)
+min.dados1
+
+max.dados1=max(pib,prev.quadr,y.quadr)
+max.dados1
+
+plot(window(pib,start=1953),ylim=c(min.dados1,max.dados1),ylab='PIB',
+     xlab='Anos',col='blue',lwd=2,xlim=c(1953,2021))
+
+lines(ts(y.quadr,start=c(1953),freq=1),col='red',lwd=2)
+abline(v=end(pib),col='blue',lty=2)
+lines(ts(c(y.quadr[length(y.quadr)],prev.quadr),start=c(2010,1),freq=1),
+      col='darkred',lty=2,lwd=2)
+```
+
+
+# 3) Modelo em log
+
+```{r}
+lpib=ts(log(pib),start=1953,freq=1)
+
+
+plot(pib,ylab='PIB',xlab='Anos',col='blue')
+par(new=TRUE)
+plot(lpib,ann=F,axes=F,col='red')
+
+modelo.log = lm(lpib ~t)
+summary(modelo.log)
+
+#Série estimada da tendência
+y.log = ts(fitted(modelo.log),start=1953,freq=1)
+
+min.lpib=min(lpib, y.log)
+max.lpib=max(lpib,y.log)
+
+plot(lpib,ylab='PIB',xlab='Anos',ylim=c(min.lpib,max.lpib),col='blue')
+par(new=TRUE)
+plot(y.log,ann=F,axes=F,ylim=c(min.lpib,max.lpib),col='red')
+
+# Obter a série livre de tendência
+z.log =ts(residuals(modelo.log),start=1953,freq=1)
+
+min.z=min(lpib,y.log,z.log)
+max.z=max(lpib,y.log,z.log)
+
+plot(lpib,ylab='PIB',xlab='Anos',ylim=c(min.z,max.z),col='blue')
+par(new=TRUE)
+plot(y.log,ann=F,axes=F,ylim=c(min.z,max.z),col='red')
+par(new=T)
+plot(z.log,ann=F,axes=F,ylim=c(min.z,max.z),col='green')
+
+# Previsão de 2011 a 2020
+h=10
+prev.log=matrix(NA,nrow=h,ncol=1)
+
+for (i in 1:h){
+  prev.log[i] = modelo.log$coefficients[1] + modelo.log$coefficients[2]*(n+i)
+}
+previsao=exp(prev.log)
+
+
+min.dados1=min(pib,previsao,exp(y.log))
+min.dados1
+
+max.dados1=max(pib,previsao,exp(y.log))
+max.dados1
+
+plot(window(pib,start=1953),ylim=c(min.dados1,max.dados1),ylab='PIB',
+     xlab='Anos',col='blue',lwd=2,xlim=c(1953,2021))
+
+lines(ts(exp(y.log),start=c(1953),freq=1),col='red',lwd=2)
+abline(v=end(pib),col='blue',lty=2)
+lines(ts(c(exp(y.log)[length(exp(y.log))],previsao),start=c(2010,1),freq=1),
+      col='darkred',lty=2,lwd=2)
+```
+
+
+# Juntando todos os modelos
+
+```{r}
+plot(window(pib,start=1953),ylim=c(min.dados1,max.dados1),ylab='PIB',
+     xlab='Anos',col='blue',lwd=2,xlim=c(1953,2021))
+
+lines(ts(exp(y.log),start=c(1953),freq=1),col='red',lwd=2)
+abline(v=end(pib),col='blue',lty=2)
+lines(ts(c(exp(y.log)[length(exp(y.log))],previsao),start=c(2011,1),freq=1),
+      col='darkred',lty=2,lwd=2)
+lines(ts(y.quadr,start=c(1953),freq=1),col='green',lwd=2)
+lines(ts(c(y.quadr[length(y.quadr)],prev.quadr),start=c(2011,1),freq=1),
+      col='darkgreen',lty=2,lwd=2)
+lines(ts(y.linear,start=c(1953),freq=1),col='yellow',lwd=2)
+lines(ts(c(y.linear[length(y.linear)],prev),start=c(2011,1),freq=1),
+      col='orange',lty=2,lwd=2)
+```
+
+
+
+
+
