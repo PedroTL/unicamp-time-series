@@ -32,7 +32,7 @@ time_serie_plot <- function(db, x, y, title, subtitle, ylab, xlab) {
 
 ---
 
-Uma s ́erie temporal  ́e uma sequencia de observa ̧c ̃oes ao longo do tempo.
+Uma śerie temporal  ́e uma sequencia de observa ̧c ̃oes ao longo do tempo.
 
 Principais objetivos em se estudar séries temporais:
 
@@ -70,6 +70,7 @@ belgica_pib <- read.xlsx("C:\\Users\\pedro\\Documents\\GitHub\\unicamp-time-seri
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 time_serie_plot(belgica_pib, "data", "pib", "PIB Belgica", "Série Temporal", "PIB em US$", "")
 ```
+
 
 ---
 

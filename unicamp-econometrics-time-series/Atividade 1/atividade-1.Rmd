@@ -1,0 +1,227 @@
+---
+title: "Atividade 1"
+author: "João Pedro"
+date: "2024-04-11"
+output: word_document
+---
+
+```{r, include = FALSE}
+pacman::p_load(forecast, dplyr, ggplot2, stats, urca, plotly, openxlsx, readxl, urca, stats, zoo, stringr, gridExtra, seasonal)
+```
+
+---
+
+```{r, echo = FALSE}
+db <- read.xlsx("C:\\Users\\pedro\\Documents\\GitHub\\unicamp-time-series\\unicamp-econometrics-time-series\\Atividade 1\\db\\db.xlsx", detectDates = T)
+
+db.ts <- ts(db[, 2], start = c(2002, 1), end = c(2024, 2), freq = 12)
+```
+
+**Descrição das Variaveis**
+
+- `data:` Períodicidade mensal, dados de Janeiro de 2002 até Fevereiro de 2024
+- `prod_industrial:` Produção industrial - indústria geral - quantum - índice (média 2022 = 100) - Instituto Brasileiro de Geografia e Estatística, Pesquisa Industrial Mensal - Produção Física (IBGE/PIM-PF)
+
+---
+
+**1) A decomposição da série temporal a partir da Média Móvel;**
+
+---
+
+### Análise da Série Temporal - Técnicas Descritivas
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+plot(db.ts, xlab = "Data", ylab = "Produção Industrial")
+```
+
+Os dados visualizados apresentam aparente sazonalidade, contudo não é possível inferir sobre a tendência.
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+plot(aggregate(db.ts), xlab = "Data", ylab = "Produção Industrial")
+```
+
+A visualização dos dados agregados melhora a percepção dos pontos focais da produção industrial, suavizando a sazonalidade. É visivel, em especial o aumento no período de 2010 até 2014 além da relevante queda a partir de 2016 e 2020.
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+boxplot(db.ts ~ cycle(db.ts))
+```
+
+A função cycle nos mostra a posição das observações no banco de dados em todo o ciclo, assinando 1 a janeiro e 12 a dezembro. 
+
+De modo geral quando olhamos para os meses do ano, em especial, a produção é mais intensificada no segundo semestre, com declinio nos ultimos meses do ano.
+
+### Decomposição Clássica
+
+---
+
+A decomposição de séries temporais é o processo de dividir uma série temporal em componentes individuais, como tendência, sazonalidade, efeitos sazonais e ruído aleatório. Isso ajuda a entender melhor os padrões subjacentes na série temporal.
+
+Considera uma série temporal ${Z_t, t = 1,..., N}$ que pode ser representada como a soma dos componentes:
+
+A análise de séries temporais envolve a identificação e modelagem da tendência de longo prazo, do ciclo de médio prazo, da sazonalidade de curto prazo e dos resíduos, que representam o ruído não explicado nos dados.
+
+---
+
+A média móvel é uma técnica que calcula a média de um número específico de observações consecutivas em torno de cada ponto na série temporal. Isso ajuda a suavizar flutuações aleatórias e destacar tendências de longo prazo ou padrões sazonais.
+
+O número específico de valores utilizados na média móvel (janela) determina o grau de suavização aplicado à série temporal. Um período maior resultará em uma suavização mais forte, enquanto um período menor capturará variações de curto prazo com mais detalhes. A função decompose estima tendência e efeito sazonal usando a decomposição com o método de médias moveis, que podemos definir como:
+
+$$
+\text{Média Móvel}_{t}^{(k)} = \frac{1}{k} \sum_{i = t - k + 1}^{t} x_{i}
+$$
+
+Onde a Média Movel no tempo $t$, $k$ sendo a janela para a média movel e $x_i$ sendo os pontos da série em um tempo $i$
+
+O modelo `Aditivo`, condiz com variância estabilizada no tempo, logo, **Homocedástico**
+
+$$
+Z_t = T_t + S_t + C_t + u_t
+$$
+
+```{r}
+autoplot(decompose(db.ts, type = "additive"))
+```
+
+```{r}
+db.ts.decomp.add <- decompose(db.ts, type = "additive")
+```
+
+```{r}
+db.ts.decom.add.sazonal <- db.ts.decomp.add$seasonal
+knitr::kable(head(db.ts.decom.add.sazonal), align = "c")
+```
+
+```{r}
+db.ts.decom.add.trend <- db.ts.decomp.add$trend
+knitr::kable(head(db.ts.decom.add.trend, 10), align = "c")
+```
+
+```{r}
+db.ts.decom.add.random <- db.ts.decomp.add$random
+knitr::kable(head(db.ts.decom.add.random, 10), align = "c")
+```
+
+```{r}
+db.ts.decom.add.indice.sazonalidade <- db.ts.decomp.add$figure
+knitr::kable(head(db.ts.decom.add.indice.sazonalidade), align = "c")
+```
+
+```{r}
+db.ts.add.dessazonalizada <- ts(db.ts - db.ts.decom.add.sazonal,  start = c(2002, 1), end = c(2024, 2), freq = 12)
+```
+
+```{r}
+plot(db.ts.add.dessazonalizada, xlab = "Data", ylab = "Produção Industrial Dessazonalizada - Aditivo")
+```
+
+---
+
+Já o modelo `Multiplicativo`, se refere à variância crescente ao longo do tempo, ou seja, **Heterocedástico**
+
+$$
+Z_t = T_t S_t C_t + u_t
+$$
+
+```{r}
+autoplot(decompose(db.ts, type = "multiplicative"))
+```
+
+```{r}
+db.ts.decomp.mult <- decompose(db.ts, type = "multiplicative")
+```
+
+```{r}
+db.ts.decom.mult.sazonal <- db.ts.decomp.mult$seasonal
+knitr::kable(head(db.ts.decom.mult.sazonal), align = "c")
+```
+
+```{r}
+db.ts.decom.mult.trend <- db.ts.decomp.mult$trend
+knitr::kable(head(db.ts.decom.mult.trend), align = "c")
+```
+
+```{r}
+db.ts.decom.mult.random <- db.ts.decomp.mult$random
+knitr::kable(head(db.ts.decom.mult.random), align = "c")
+```
+
+```{r}
+db.ts.decom.mult.indice.sazonalidade <- db.ts.decomp.mult$figure
+knitr::kable(head(db.ts.decom.mult.indice.sazonalidade), align = "c")
+```
+
+```{r}
+db.ts.dessazonalizada.mult <- ts(db.ts / db.ts.decom.mult.sazonal,  start = c(2002, 1), end = c(2024, 2), freq = 12)
+```
+
+```{r}
+plot(db.ts.dessazonalizada.mult, xlab = "Data", ylab = "Produção Industrial Dessazonalizada")
+```
+
+É possível visualizar, tando pelo metodo multiplicativo quando no aditivo, a dessazonalização da série temporal pela média movel. Tal processo melhora a percepção das grandes quedas, em especial no ano de 2020 e 2008. Os respectivos períodos explicam a queda da produtividade industrial, o primeiro causado pela crise do SubPrime e o segundo pela pandemia do COVID-19.
+
+---
+
+**2) Considerando a série dessazonalizada obtida do procedimento do item 1), aplique o teste de raiz unitária ADF.**
+
+---
+
+Uma série temporal com uma raiz unitária não é estacionária, o que implica em mudanças na média e na variância ao longo do tempo. A estacionaridade é crucial em análise de séries temporais, pois séries estacionárias possuem propriedades estatísticas invariantes, simplificando a modelagem e previsão futura. O teste ADF (Dickey-Fuller Aumentado) é usado para formalmente distinguir entre séries estacionárias e não estacionárias, levando em conta a correlação temporal. Visualizações gráficas e a função de autocorrelação também complementam na análise.
+
+Considera-se o modelo:
+
+$$
+Y_t = \rho Y_{t-1} + u_t
+$$
+
+Quando se tem $\rho = 1$ obtemos o problema de raiz unitária, sendo sinonimo de não estácionariedade. O teste ADF possui três especificações.
+
+Onde $\tau = 0$ indica presença de raiz unitária. $\phi1 = 0$ ou $\phi3 = 0$ mostra a presença de raiz unitária, contudo, sem a presença de intercepto. Por sua vez, $\phi2 = 0$ evidência a presença de raiz unitária sem a presença de intercepto e tendência, simultaneamente.
+
+Para o teste, temos que, se o valor da estatística de teste ADF for menor do que os valores críticos correspondentes, rejeitamos a hipótese nula de presença de raiz unitária e concluímos que a série temporal é estacionária.
+
+A seleção da especificação do teste de raiz unitária depende da natureza da série temporal. Em linhas gerais, quando a série mostra tendência, é consideravel incluir o termo de tendência no teste. Ademais, pode-se utilizar todas as especificações na presença de incerteza e verificar a significancia dos testes.
+
+---
+
+### Teste ADF em Nível Dessazonalizada
+
+---
+
+#### Variável em Nível com Drift e Trend 
+
+```{r}
+db.ts.adf.trend = ur.df(db.ts.add.dessazonalizada, type = 'trend', lags = 0)
+summary(db.ts.adf.trend)
+```
+
+- Raiz unitária  está presente em $\tau3$ 5% (H0 não rejeitada) e está presente em 1% (H0 não rejeitada).
+- Raiz unitária está presente em $\phi3$ 1% (Ho não rejeitada) e não há tendência. 
+- Raiz unitária está presente em $\phi3$ 1% (Ho não rejeitada) e não há tendência nem drift.
+
+---
+
+#### Variável em Nível com Drift 
+
+```{r}
+db.ts.adf.drift = ur.df(db.ts.add.dessazonalizada, type = 'drift', lags = 0)
+summary(db.ts.adf.drift)
+```
+
+- Raiz unitária está presente em $\tau2$ 1% (H0 não rejeitada) e não está presente em 5% (H0 rejeitada)
+- Raiz unitária está presenta em $\phi2$ 1% (H0 não rejeitada) e não há drift. Em 5% (H0 rejeitada) não há raiz unitária e há drift.
+
+---
+
+#### Variável em Nível sem Drift e Trend
+
+```{r}
+db.ts.adf.none = ur.df(db.ts.add.dessazonalizada, type = 'none', lags = 0)
+summary(db.ts.adf.none)
+```
+
+- Raiz unitária não está presente em $\tau1$ 1%, 5% e 10% (H0 rejeitada)
+
+Por fim, a série dessazonalizada mostra estacionariedade. Ademais, é possível utilizar metodos para transformar a série temporal em estácionaria, os mais comuns são transformação em log ou a primeira diferença.
+
+---
