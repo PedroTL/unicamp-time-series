@@ -315,3 +315,28 @@ ggplot(fevd_long, aes(x = Time, y = Variance_Explained, fill = Source)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~Variable, scales = "free_y", ncol = 1) +
   labs(x = "Período em meses", y = "Variância Explicada", title = "")
+
+    
+#### Granger ----
+# H1	Preço Futuro de Milho Influencia Significativamente o Preço Futuro de Boi de Engorda
+# H2 	Preço Futuro de Milho Não Influencia Significativamente o Preço Futuro de Boi de Vivo
+# H3	Preço Futuro de Boi de Engorda Influencia Significativamente o Preço Futuro de Boi Vivo
+# H4 	Preço Futuro de Boi Vivo Não Influencia Significativamente o Preço Futuro do Boi de Engorda
+
+var_model <- vars::VAR(live_stock_model, p = 2, type = "both")
+
+# H1
+H1 <- grangertest(feeder_cattle.ts ~ corn.ts, order = 2, data = live_stock_model)
+H1
+
+# H2
+H2 <- grangertest(live_cattle.ts ~ corn.ts, order = 2, data = live_stock_model)
+H2
+
+# H3 
+H3 <- grangertest(live_cattle.ts ~ feeder_cattle.ts, order = 2, data = live_stock_model)
+H3
+
+# H4
+H4 <- grangertest(feeder_cattle.ts ~ live_cattle.ts, order = 2, data = live_stock_model)
+H4
