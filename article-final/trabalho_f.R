@@ -105,7 +105,7 @@ cor.test.p <- function(x){
 pacman::p_load(dplyr, devtools, stringr, strucchange, urca, gridExtra, sandwich, utils, forecast, stats, tseries, dynlm, tidyr, lmtest, openxlsx, lubridate, sjPlot, plotly, htmlwidgets, ggcorplot, rstatix, heatmaply, install = TRUE)
 
 # Data Preco Fechamento 10 Anos Soybean, Soymeal, Soyoil, Corn, Live Cattle, Feeder Cattle
-futures <- read.csv2("C:\\Users\\pedro\\Desktop\\unicamp\\futures.csv", check.names = FALSE) 
+futures <- read.csv2("https://github.com/PedroTL/unicamp-time-series/blob/main/article-final/futures.csv", check.names = FALSE) 
 
 # Dates
 futures$Date <- lubridate::dmy(futures$Date)
