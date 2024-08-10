@@ -1,0 +1,325 @@
+---
+
+title: "Untitled"
+author: "João Pedro"
+date: "2024-07-18"
+output: word_document
+
+---
+
+## Inicio
+
+```{r}
+pacman::p_load(MASS, lmtest, urca, vars, strucchange, tsDyn, xst, utils, forecast, stats, tseries, dynlm, tidyr, lmtest, gridExtra, ggplot2, devtools, openxlsx, lubridate, markdown, knitr, readxl, rmarkdown, knitr, install = TRUE)
+
+df <- read.xlsx("C:\\Users\\pedro\\Desktop\\b\\df.xlsx", detectDates = TRUE)
+df$data <- paste0(df$data, ".01")
+df$data <- as.Date(df$data, format = "%Y.%m.%d")
+df <- df[df$data < as.Date("2020-01-01"),]
+```
+
+```{r}
+df.ts <- ts(df$energia, frequency = 12, start = c(2004, 01), end = c(2019, 12))
+```
+
+1. 
+
+```{r}
+df.ts.decomp <- stl(df.ts, s.window = "periodic")
+df.ts.decomp.seas <- seasadj(df.ts.decomp)
+```
+
+```{r}
+par(mfrow=c(1,2))
+acf(df.ts.decomp.seas, main="FAC da série dessazonalizada")
+pacf(df.ts.decomp.seas, main="FACP da série dessazonalizada")
+```
+
+```{r}
+auto.arima(df.ts.decomp.seas, ic = c("aic"), trace = TRUE)
+```
+
+```{r}
+auto.arima(df.ts.decomp.seas, ic = c("bic"), trace = TRUE)
+```
+
+```{r}
+adf.test(df.ts)
+```
+
+```{r}
+adf.test(df.ts.decomp.seas)
+```
+
+O teste ADF para a série original (df.ts) resultou em um valor de p de 0.3902, indicando que a série não é estacionária.
+O teste ADF para a série dessazonalizada (df.ts.decomp.seas) resultou em um valor de p de 0.5501, indicando que a série dessazonalizada também não é estacionária.
+
+O modelo selecionado pelo critério AIC foi ARIMA(1,1,1) com drift.
+O modelo selecionado pelo critério BIC foi ARIMA(0,1,0).
+
+Baseado na análise da série dessazonalizada e considerando os critérios de informação AIC e BIC, os possíveis modelos ARIMA para os dados até o ano de 2019 são:
+
+- Modelo ARIMA(1,1,1) com drift: Identificado pelo critério AIC, este modelo inclui termos autoregressivo (AR) e de média móvel (MA) de primeira ordem e um termo de drift. Este modelo sugere que há uma combinação de dependência lag entre os dados e um componente de tendência.
+
+- Modelo ARIMA(0,1,0): Identificado pelo critério BIC, este modelo é o mais simples, sugerindo que a série é um passeio aleatório sem componente AR ou MA.
+
+A escolha entre esses modelos depende do balanceamento entre a complexidade do modelo e o ajuste aos dados. O critério AIC tende a preferir modelos mais complexos, enquanto o BIC penaliza mais a complexidade, preferindo modelos mais simples.
+
+---
+
+2. 
+
+```{r}
+df.ts.decom.seas.fit.aic <- Arima(df.ts.decomp.seas, order = c(1, 1, 1), include.drift = TRUE)
+summary(df.ts.decom.seas.fit.aic)
+```
+
+Interpretação:
+Coeficientes:
+
+ar1 (autoregressive term): 0.5876, com erro padrão de 0.1077. Este coeficiente é estatisticamente significativo e indica uma dependência positiva de primeira ordem na série temporal.
+ma1 (moving average term): -0.8171, com erro padrão de 0.0728. Este coeficiente também é estatisticamente significativo e indica uma dependência negativa de primeira ordem.
+drift: 32.4195, com erro padrão de 12.9332. Este termo representa uma tendência linear na série temporal.
+Variância dos erros (sigma^2): 159457, indicando a variância do termo de erro na série temporal.
+
+
+```{r}
+df.ts.decom.seas.fit.bic <- Arima(df.ts.decomp.seas, order = c(0, 1, 0))
+summary(df.ts.decom.seas.fit.bic)
+```
+
+Interpretação:
+Coeficientes:
+
+O modelo ARIMA(0,1,0) não tem termos autoregressivos ou de média móvel, apenas uma diferença de primeira ordem (d=1), o que indica que a série é modelada como um passeio aleatório com uma tendência de passeio.
+Variância dos erros (sigma^2): 170647, indicando a variância do termo de erro na série temporal.
+
+Os modelos ARIMA identificados e seus parâmetros foram estimados usando o método de Máxima Verossimilhança. Abaixo estão os detalhes dos modelos:
+
+Modelo ARIMA(1,1,1) com drift:
+
+Este modelo inclui termos AR e MA de primeira ordem e um termo de drift, sugerindo uma combinação de dependência lag e uma tendência linear na série temporal.
+As medidas de erro indicam que o modelo tem um bom ajuste, com erros relativamente baixos e uma ACF1 próxima de zero, indicando pouca correlação residual.
+Modelo ARIMA(0,1,0):
+
+Este modelo é um passeio aleatório com uma tendência de passeio.
+As medidas de erro são ligeiramente maiores do que no modelo ARIMA(1,1,1) com drift, e a ACF1 é negativa, indicando alguma autocorrelação residual.
+A escolha entre esses modelos depende do balanceamento entre a complexidade do modelo e o ajuste aos dados. O modelo ARIMA(1,1,1) com drift oferece um ajuste ligeiramente melhor com menor erro, mas é mais complexo do que o modelo ARIMA(0,1,0).
+
+---
+
+3. 
+
+```{r}
+# Gráficos de resíduos para ARIMA(1,1,1) com drift
+par(mfrow = c(2, 2))
+plot(residuals(df.ts.decom.seas.fit.aic), main = "Resíduos do modelo ARIMA(1,1,1) com drift", ylab = "Resíduos")
+acf(residuals(df.ts.decom.seas.fit.aic), main = "FAC dos resíduos")
+pacf(residuals(df.ts.decom.seas.fit.aic), main = "FACP dos resíduos")
+qqnorm(residuals(df.ts.decom.seas.fit.aic))
+qqline(residuals(df.ts.decom.seas.fit.aic))
+```
+
+```{r}
+# Teste de Ljung-Box para ARIMA(1,1,1) com drift
+Box.test(residuals(df.ts.decom.seas.fit.aic), lag = 12, type = "Ljung-Box")
+```
+
+
+```{r}
+# Gráficos de resíduos para ARIMA(0,1,0)
+par(mfrow = c(2, 2))
+plot(residuals(df.ts.decom.seas.fit.bic), main = "Resíduos do modelo ARIMA(0,1,0)", ylab = "Resíduos")
+acf(residuals(df.ts.decom.seas.fit.bic), main = "FAC dos resíduos")
+pacf(residuals(df.ts.decom.seas.fit.bic), main = "FACP dos resíduos")
+qqnorm(residuals(df.ts.decom.seas.fit.bic))
+qqline(residuals(df.ts.decom.seas.fit.bic))
+```
+
+```{r}
+# Teste de Ljung-Box para ARIMA(0,1,0)
+Box.test(residuals(df.ts.decom.seas.fit.bic), lag = 12, type = "Ljung-Box")
+```
+
+Interpretação dos Resultados da Análise de Resíduos
+Gráficos de Resíduos:
+
+Os gráficos de resíduos devem mostrar que os resíduos não possuem tendência aparente, o que indica que o modelo está capturando bem a estrutura dos dados.
+A ACF e PACF dos resíduos devem mostrar que não há autocorrelação significativa nos resíduos, indicando que o modelo é adequado.
+O QQ-plot dos resíduos deve seguir aproximadamente a linha de 45 graus, indicando que os resíduos seguem uma distribuição normal.
+Teste de Ljung-Box:
+
+O teste de Ljung-Box verifica a hipótese nula de que os resíduos não são autocorrelacionados. Um p-valor alto (> 0.05) indica que não há autocorrelação significativa nos resíduos, sugerindo que o modelo é adequado.
+
+Resultados da Análise de Resíduos
+Modelo ARIMA(1,1,1) com drift:
+
+Gráficos de resíduos: (Análise dos gráficos gerados)
+Teste de Ljung-Box: Se o p-valor for maior que 0.05, o modelo passa no teste de autocorrelação dos resíduos.
+Modelo ARIMA(0,1,0):
+
+Gráficos de resíduos: (Análise dos gráficos gerados)
+Teste de Ljung-Box: Se o p-valor for maior que 0.05, o modelo passa no teste de autocorrelação dos resíduos.
+
+
+
+Modelo ARIMA(1,1,1) com drift
+Teste de Ljung-Box:
+X-squared = 14.868, df = 12, p-value = 0.2488
+Interpretação:
+O p-valor é 0.2488, que é maior que o nível de significância comum (0.05).
+Isso indica que não há evidência significativa de autocorrelação nos resíduos do modelo ARIMA(1,1,1) com drift.
+Portanto, podemos concluir que este modelo é adequado em termos de ausência de autocorrelação nos resíduos.
+Modelo ARIMA(0,1,0)
+Teste de Ljung-Box:
+X-squared = 23.989, df = 12, p-value = 0.02041
+Interpretação:
+O p-valor é 0.02041, que é menor que o nível de significância comum (0.05).
+Isso indica que há evidência significativa de autocorrelação nos resíduos do modelo ARIMA(0,1,0).
+Portanto, podemos concluir que este modelo não é adequado devido à presença de autocorrelação nos resíduos.
+Conclusão
+Modelo ARIMA(1,1,1) com drift:
+
+Este modelo é adequado, pois os resíduos não apresentam autocorrelação significativa (conforme indicado pelo teste de Ljung-Box).
+Os gráficos de resíduos, ACF, PACF e QQ-plot devem confirmar a adequação do modelo, mostrando que os resíduos são ruído branco e seguem uma distribuição normal.
+Modelo ARIMA(0,1,0):
+
+Este modelo não é adequado, pois os resíduos apresentam autocorrelação significativa.
+Os gráficos de resíduos, ACF, PACF e QQ-plot provavelmente mostram padrões de autocorrelação e desvios da normalidade.
+
+---
+4.
+
+```{r}
+# Previsão de 1 passo à frente
+df.ts.decom.seas.fit.aic.forecast.1 <- forecast(df.ts.decom.seas.fit.aic, h = 1)
+print(df.ts.decom.seas.fit.aic.forecast.1)
+```
+
+```{r}
+# Previsão de 12 passos à frente
+df.ts.decom.seas.fit.aic.forecast.12 <- forecast(df.ts.decom.seas.fit.aic, h = 12)
+print(df.ts.decom.seas.fit.aic.forecast.12)
+```
+
+```{r}
+df_real <- read.xlsx("C:\\Users\\pedro\\Desktop\\b\\df.xlsx", detectDates = TRUE)
+df_real$data <- paste0(df_real$data, ".01")
+df_real$data <- as.Date(df_real$data, format = "%Y.%m.%d")
+df_real <- df_real[df_real$data >= as.Date("2020-01-01") & df_real$data <= as.Date("2023-12-01"), ]
+
+# Extraindo o valor previsto e o valor real para o 1º passo à frente
+forecast_1_step <- df.ts.decom.seas.fit.aic.forecast.1$mean
+atual_1_step <- df_real$energia[df_real$data == as.Date("2020-01-01")]
+
+# Calculando os erros para a previsão de 1 passo à frente
+rmse_1_step <- sqrt(mean((atual_1_step - forecast_1_step)^2))
+mae_1_step <- mean(abs(atual_1_step - forecast_1_step))
+mape_1_step <- mean(abs((atual_1_step - forecast_1_step) / atual_1_step)) * 100
+
+cat("Previsão 1 passo à frente:\n")
+cat("RMSE:", rmse_1_step, "\n")
+cat("MAE:", mae_1_step, "\n")
+cat("MAPE:", mape_1_step, "%\n")
+
+```
+
+```{r}
+forecast_12_steps <- df.ts.decom.seas.fit.aic.forecast.12$mean
+dates_12_steps <- seq.Date(as.Date("2020-01-01"), by = "month", length.out = 12)
+atual_12_steps <- df_real$energia[df_real$data %in% dates_12_steps]
+
+# Calculando os erros para a previsão de 12 passos à frente
+rmse_12_steps <- sqrt(mean((atual_12_steps - forecast_12_steps)^2))
+mae_12_steps <- mean(abs(atual_12_steps - forecast_12_steps))
+mape_12_steps <- mean(abs((atual_12_steps - forecast_12_steps) / atual_12_steps)) * 100
+
+cat("Previsão 12 passos à frente:\n")
+cat("RMSE:", rmse_12_steps, "\n")
+cat("MAE:", mae_12_steps, "\n")
+cat("MAPE:", mape_12_steps, "%\n")
+cat("MAPE:", mape_12_steps, "%\n")
+```
+
+---
+5.
+
+1. Análise dos Resíduos
+Modelo ARIMA(1,1,1) com Drift:
+
+Teste de Ljung-Box: O p-valor é 0.2488, maior que 0.05, indicando que não há autocorrelação significativa nos resíduos. Isso sugere que o modelo é adequado.
+Gráficos de Resíduos: Devem mostrar resíduos sem tendência aparente e com uma distribuição normal. A ACF e PACF dos resíduos não devem mostrar autocorrelação significativa.
+Modelo ARIMA(0,1,0):
+
+Teste de Ljung-Box: O p-valor é 0.02041, menor que 0.05, indicando autocorrelação significativa nos resíduos. Isso sugere que o modelo não é totalmente adequado.
+2. Erros de Previsão
+Os erros de previsão fornecidos são:
+
+Para ARIMA(1,1,1) com Drift:
+
+1 passo à frente:
+
+RMSE: 449.4633
+MAE: 449.4633
+MAPE: 2.235246%
+12 passos à frente:
+
+RMSE: 1337.055
+MAE: 1009.151
+MAPE: 5.51585%
+Para ARIMA(0,1,0):
+
+Não fornecidos, mas assumindo que você tenha esses valores, você deve compará-los da mesma forma.
+Interpretação dos Resultados
+Modelo ARIMA(1,1,1) com Drift:
+
+Resíduos: Adequado, sem autocorrelação significativa (p-valor > 0.05 no teste de Ljung-Box).
+Erros de Previsão: Os erros são relativamente baixos e mostram um bom desempenho, especialmente para previsões de 1 passo à frente.
+Modelo ARIMA(0,1,0):
+
+Resíduos: Não adequado, com autocorrelação significativa (p-valor < 0.05 no teste de Ljung-Box).
+Erros de Previsão: Embora você não tenha fornecido esses valores diretamente, a presença de autocorrelação significativa sugere que o modelo pode não estar capturando bem a estrutura dos dados, possivelmente resultando em maiores erros de previsão.
+Conclusão
+O modelo ARIMA(1,1,1) com Drift é o mais adequado com base nas seguintes considerações:
+
+Adequação dos Resíduos: O modelo ARIMA(1,1,1) com Drift passa no teste de Ljung-Box e apresenta resíduos que, supõe-se, são ruído branco e seguem uma distribuição normal.
+Erros de Previsão: Embora os erros para previsões de 12 passos à frente sejam maiores, eles ainda são relativamente baixos em comparação com a variabilidade dos dados e com os erros esperados. O modelo ARIMA(0,1,0) apresenta autocorrelação significativa nos resíduos, sugerindo que não está ajustado corretamente.
+Portanto, o modelo ARIMA(1,1,1) com Drift deve ser preferido, considerando a análise dos resíduos e o desempenho nas previsões.
+
+---
+5.
+
+```{r}
+# Ler os dados atualizados até 2023
+df_final <- read.xlsx("C:\\Users\\pedro\\Desktop\\b\\df.xlsx", detectDates = TRUE)
+df_final$data <- paste0(df_final$data, ".01")
+df_final$data <- as.Date(df_final$data, format = "%Y.%m.%d")
+df_final <- df_final[df_final$data <= as.Date("2023-12-01"), ]
+```
+
+```{r}
+df_final.ts <- ts(df$energia, frequency = 12, start = c(2004, 01), end = c(2023, 12))
+```
+
+```{r}
+df_final.ts.arima <- Arima(df_final.ts, order = c(1, 1, 1), include.drift = TRUE)
+summary(df_final.ts.arima)
+```
+
+```{r}
+df_final.ts.arima.forecast <- forecast(df_final.ts.arima, h = 12)
+print(df_final.ts.arima.forecast)
+```
+
+```{r}
+# Criar o gráfico
+plot(df_final.ts, type = "l", col = "blue", lty = 1, 
+     xlab = "Data", ylab = "Valor", 
+     main = "Série Temporal e Previsões ARIMA")
+
+lines(df_final.ts.arima.forecast$mean, col = "red", lty = 2)
+matlines(df_final.ts.arima.forecast$lower[,2], col = "red", lty = 2, lwd = 0.5)
+matlines(df_final.ts.arima.forecast$upper[,2], col = "red", lty = 2, lwd = 0.5)
+legend("topleft", legend = c("Histórico", "Previsão"), col = c("blue", "red"), lty = c(1, 2))
+```
+

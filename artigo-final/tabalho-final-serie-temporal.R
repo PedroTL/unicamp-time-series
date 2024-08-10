@@ -105,7 +105,7 @@ cor.test.p <- function(x){
 pacman::p_load(dplyr, devtools, stringr, strucchange, urca, gridExtra, sandwich, utils, forecast, stats, tseries, dynlm, tidyr, lmtest, openxlsx, lubridate, sjPlot, plotly, htmlwidgets, ggcorplot, rstatix, heatmaply, install = TRUE)
 
 # Data Preco Fechamento 10 Anos Soybean, Soymeal, Soyoil, Corn, Live Cattle, Feeder Cattle
-futures <- read.csv2("https://github.com/PedroTL/unicamp-time-series/blob/main/article-final/futures.csv", check.names = FALSE) 
+futures <- read.csv2("C:\\Users\\pedro\\Desktop\\unicamp\\futures.csv", check.names = FALSE) 
 
 # Dates
 futures$Date <- lubridate::dmy(futures$Date)
@@ -162,7 +162,7 @@ subplot_fig_cattle <- subplot(plot_feeder_cattle, plot_live_cattle, plot_corn, n
 #### Raiz Unitaria Nivel e Log ----
 future_unit_root <- unit_root_tests(futures[, 5:7])
 future_unit_root
-summary(ur.df(orcam[, 2], type = "none", selectlags = "AIC"))
+
 
 future_log_unit_root <- unit_root_tests(futures_log[, 5:7])
 future_log_unit_root
@@ -245,7 +245,8 @@ summary(joh.test_monthly)
 vecm_model_month <- vars::vec2var(joh.test_monthly, r = 1) 
 
 #### Impulso Resposta (10 Month) ----
-irf_results <- vars::irf(vecm_model_month, impulse = c("feeder_cattle.month.ts", "corn.month.ts", "live_cattle.month.ts"), response = c("feeder_cattle.month.ts", "corn.month.ts", "live_cattle.month.ts"), n.ahead = 10, ortho = TRUE)
+irf_results <- vars::irf(vecm_model_month, impulse = c("feeder_cattle.month.ts", "corn.month.ts", "live_cattle.month.ts"), 
+                         response = c("feeder_cattle.month.ts", "corn.month.ts", "live_cattle.month.ts"), n.ahead = 10, ortho = TRUE)
 
 #### Função para extrair VAR IRF (Month) ----
 source_url("https://raw.githubusercontent.com/anguyen1210/var-tools/master/R/extract_varirf.R")
@@ -316,7 +317,7 @@ ggplot(fevd_long, aes(x = Time, y = Variance_Explained, fill = Source)) +
   facet_wrap(~Variable, scales = "free_y", ncol = 1) +
   labs(x = "Período em meses", y = "Variância Explicada", title = "")
 
-    
+
 #### Granger ----
 # H1	Preço Futuro de Milho Influencia Significativamente o Preço Futuro de Boi de Engorda
 # H2 	Preço Futuro de Milho Não Influencia Significativamente o Preço Futuro de Boi de Vivo
